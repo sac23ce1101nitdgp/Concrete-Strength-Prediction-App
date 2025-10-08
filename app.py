@@ -60,34 +60,32 @@ if st.button("🔮 Predict"):
     for k, v in predictions.items():
         st.write(f"**{k}:** {v:.3f} MPa")
     
- # ---------------- Bar Chart ----------------
-st.subheader("📊 Predicted Strengths Visualization")
-fig, ax = plt.subplots(figsize=(8,5))  # Optional: adjust figure size
-bars = ax.bar(predictions.keys(), predictions.values(), color=['skyblue','lightgreen','salmon'])
+    # ---------------- Bar Chart ----------------
+    st.subheader("📊 Predicted Strengths Visualization")
+    fig, ax = plt.subplots(figsize=(8,5))
+    bars = ax.bar(predictions.keys(), predictions.values(), color=['skyblue','lightgreen','salmon'])
 
-ax.set_ylabel("Strength (MPa)", fontsize=10)  # smaller y-axis label
-ax.set_ylim(0, max(predictions.values())*1.2)
-ax.tick_params(axis='x', labelsize=9)  # smaller x-axis labels
-ax.tick_params(axis='y', labelsize=9)  # smaller y-axis labels
+    ax.set_ylabel("Strength (MPa)", fontsize=10)
+    ax.set_ylim(0, max(predictions.values())*1.2)
+    ax.tick_params(axis='x', labelsize=9)
+    ax.tick_params(axis='y', labelsize=9)
 
-# Display value on top of each bar
-for i, v in enumerate(predictions.values()):
-    ax.text(i, v + max(predictions.values())*0.02, f"{v:.2f}", ha='center', fontsize=9)  # smaller text
+    for i, v in enumerate(predictions.values()):
+        ax.text(i, v + max(predictions.values())*0.02, f"{v:.2f}", ha='center', fontsize=9)
 
-st.pyplot(fig)
-
+    st.pyplot(fig)
     
     # ---------------- Download Prediction as Excel ----------------
     st.subheader("💾 Export Prediction")
     result_df = pd.DataFrame([{**user_input, **predictions}])
     buffer = BytesIO()
-    
-    # Use ExcelWriter with openpyxl engine for Streamlit Cloud compatibility
+
+    # Use ExcelWriter with openpyxl engine
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         result_df.to_excel(writer, index=False)
-    
+
     buffer.seek(0)
-    
+
     st.download_button(
         label="Download Prediction as Excel",
         data=buffer,
