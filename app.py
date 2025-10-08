@@ -60,15 +60,22 @@ if st.button("🔮 Predict"):
     for k, v in predictions.items():
         st.write(f"**{k}:** {v:.3f} MPa")
     
-    # ---------------- Bar Chart ----------------
-    st.subheader("📊 Predicted Strengths Visualization")
-    fig, ax = plt.subplots()
-    ax.bar(predictions.keys(), predictions.values(), color=['skyblue','lightgreen','salmon'])
-    ax.set_ylabel("Strength (MPa)")
-    ax.set_ylim(0, max(predictions.values())*1.2)
-    for i, v in enumerate(predictions.values()):
-        ax.text(i, v + max(predictions.values())*0.02, f"{v:.2f}", ha='center')
-    st.pyplot(fig)
+ # ---------------- Bar Chart ----------------
+st.subheader("📊 Predicted Strengths Visualization")
+fig, ax = plt.subplots(figsize=(8,5))  # Optional: adjust figure size
+bars = ax.bar(predictions.keys(), predictions.values(), color=['skyblue','lightgreen','salmon'])
+
+ax.set_ylabel("Strength (MPa)", fontsize=10)  # smaller y-axis label
+ax.set_ylim(0, max(predictions.values())*1.2)
+ax.tick_params(axis='x', labelsize=9)  # smaller x-axis labels
+ax.tick_params(axis='y', labelsize=9)  # smaller y-axis labels
+
+# Display value on top of each bar
+for i, v in enumerate(predictions.values()):
+    ax.text(i, v + max(predictions.values())*0.02, f"{v:.2f}", ha='center', fontsize=9)  # smaller text
+
+st.pyplot(fig)
+
     
     # ---------------- Download Prediction as Excel ----------------
     st.subheader("💾 Export Prediction")
