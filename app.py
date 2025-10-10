@@ -56,7 +56,7 @@ zero_not_allowed = set(all_features) - zero_allowed
 
 # ---------------- Feature Ranges (example – replace with real ones) ----------------
 feature_ranges = {
-       "Polypropylene Fiber (gm)": (0, 15),
+    "Polypropylene Fiber (gm)": (0, 15),
     "Steel Fiber (gm)": (0, 15),
     "Length of PF (mm)": (0, 30),
     "Diameter of PF (mm)": (0, 2),
