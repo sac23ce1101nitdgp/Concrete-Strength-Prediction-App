@@ -43,7 +43,7 @@ input_features = [
     "Fine Aggregate : Binder"
 ]
 
-# ---------------- Define Valid Ranges ----------------
+# ---------------- Valid Ranges ----------------
 valid_ranges = {
     "Polypropylene Fiber (gm)": (0, 5), 
     "Steel Fiber (gm)": (0, 5), 
@@ -71,21 +71,22 @@ st.header("🧾 Input Parameters")
 user_input = {}
 out_of_range_flags = {}
 
-# Create two columns for inputs
 col1, col2 = st.columns(2)
 
 for i, feature in enumerate(input_features):
     target_col = col1 if i % 2 == 0 else col2
     with target_col:
+        # Skip auto-calculated
         if feature in ["Water:Binder", "Total Binder (gm)", "Fine Aggregate : Binder", "Steel Fiber: Polypropylene Fiber"]:
-            user_input[feature] = 0.0  # Auto-calculated fields
+            user_input[feature] = 0.0
         else:
             user_input[feature] = st.number_input(feature, value=0.0, min_value=0.0, key=feature)
 
-            # Validate input range silently
+            # Validation only after user changes from default
             low, high = valid_ranges.get(feature, (None, None))
-            if low is not None and high is not None:
-                if not (low <= user_input[feature] <= high):
+            val = user_input[feature]
+            if val != 0.0 and low is not None and high is not None:
+                if not (low <= val <= high):
                     out_of_range_flags[feature] = f"⚠️ Value out of valid range ({low} - {high})."
                     st.markdown(
                         f"<p style='color:#E67E22;font-size:13px;margin-top:-8px;'>{out_of_range_flags[feature]}</p>",
@@ -123,7 +124,7 @@ if (flyash > 0 or ggbs > 0) and (naoh == 0 or na2sio3 == 0):
     out_of_range_flags["NaOH pallets (gm)"] = "invalid"
     out_of_range_flags["Na2SiO3 (gm)"] = "invalid"
 
-# ---------------- Display Auto-Calculated Fields ----------------
+# ---------------- Display Auto-Calculated ----------------
 st.markdown("### 🔄 Auto-Calculated Fields")
 st.write(f"**Total Binder (gm):** {total_binder:.2f}")
 st.write(f"**Water:Binder:** {water_binder:.3f}")
@@ -136,7 +137,7 @@ if st.button("🔮 Predict"):
         st.error("❌ Please correct the highlighted input values before prediction.")
     else:
         input_df = pd.DataFrame([user_input])
-        input_df = input_df[input_features]  # ensure correct column order
+        input_df = input_df[input_features]
 
         # Clip extreme unseen values
         input_df = input_df.clip(lower=0, upper=np.percentile(input_df, 99, axis=0))
