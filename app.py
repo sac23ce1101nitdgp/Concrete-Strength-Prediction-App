@@ -25,9 +25,9 @@ for name, path in model_paths.items():
         st.stop()
 
 # ---------------- App Title ----------------
-st.title("🧠 FRBC Strength Prediction Web App")
+st.title("🧠 Fiber-Reinforced Binder Composite (FRBC) Strength Prediction App")
 st.markdown("""
-Enter the input features below to predict:
+Enter the input parameters to predict:
 - **Compressive Strength (MPa)**
 - **Flexural Strength (MPa)**
 - **Breaking Stress (MPa)**
@@ -41,10 +41,10 @@ feature_limits = {
     "Diameter of PF (mm)": (0, 0.5),
     "Length of SF (mm)": (0, 65),
     "Diameter of SF (mm)": (0, 1.5),
-    "Cement Content (gm)": (0, 300),
+    "Cement Content (gm)": (0, 600),
     "FlyAsh (gm)": (0, 300),
     "GGBS (gm)": (0, 300),
-    "Fine Aggregate (gm)": (10, 300),
+    "Fine Aggregate (gm)": (10, 900),
     "NaOH pallets (gm)": (0, 50),
     "Water (gm)": (1, 250),
     "Na2SiO3 (gm)": (0, 75),
@@ -57,7 +57,7 @@ st.header("Input Parameters")
 cols = st.columns(2)
 user_input = {}
 
-for i, (feature, (low, high)) in enumerate(feature_limits.items()):
+for i, (feature, _) in enumerate(feature_limits.items()):
     with cols[i % 2]:
         val = st.number_input(feature, value=0.0, step=0.1, key=feature)
         user_input[feature] = val
@@ -100,14 +100,14 @@ auto_cols[1].metric("Steel Fiber : Polypropylene Fiber", f"{sf_pf_ratio:.3f}")
 
 # ---------------- Predict Button ----------------
 if st.button("🔮 Predict"):
-    # Validation 1: Critical fields non-zero
-    critical_fields = ["Cement Content (gm)", "Fine Aggregate (gm)", "Water (gm)", "Density (kg/m3)"]
+    # Validation 1: Critical fields non-zero (Cement can be zero)
+    critical_fields = ["Fine Aggregate (gm)", "Water (gm)", "Density (kg/m3)"]
     invalid_zeros = [f for f in critical_fields if user_input[f] == 0]
     if invalid_zeros:
         st.error(f"❌ Invalid input: {', '.join(invalid_zeros)} cannot be zero.")
         st.stop()
 
-    # Validation 2: Range checking
+    # Validation 2: Range checking (only display if invalid)
     invalid_ranges = []
     for feature, (low, high) in feature_limits.items():
         val = user_input[feature]
@@ -118,9 +118,9 @@ if st.button("🔮 Predict"):
         st.error("⚠️ Out-of-range values detected:\n" + "\n".join(invalid_ranges))
         st.stop()
 
-    # Validation 3: Total binder
+    # Validation 3: Binder check
     if total_binder == 0:
-        st.error("❌ Total Binder cannot be zero. Please enter valid binder values.")
+        st.error("❌ Total Binder cannot be zero. Please enter valid Cement, FlyAsh, or GGBS values.")
         st.stop()
 
     # ---------------- Prediction ----------------
