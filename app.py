@@ -1,4 +1,4 @@
-# ==================== Concrete Strength Prediction Web App ====================
+# ==================== Concrete Strength Prediction Web App (Enhanced Validation) ====================
 import streamlit as st
 import pandas as pd
 from joblib import load
@@ -34,24 +34,45 @@ Enter the mix design parameters below to predict:
 - **Breaking Stress (MPa)**
 """)
 
-# ---------------- Input Fields ----------------
-input_features = [
-    "Polypropylene Fiber (gm)", "Steel Fiber (gm)", "Length of PF (mm)", "Diameter of PF (mm)",
-    "Length of SF (mm)", "Diameter of SF (mm)", "Cement Content (gm)", "FlyAsh (gm)", "GGBS (gm)",
-    "Fine Aggregate (gm)", "NaOH pallets (gm)", "Water (gm)", "Na2SiO3 (gm)", "Water:Binder",
-    "Density (kg/m3)", "AGE", "Steel Fiber: Polypropylene Fiber", "Total Binder (gm)",
-    "Fine Aggregate : Binder"
-]
+# ---------------- Input Ranges ----------------
+valid_ranges = {
+    "Polypropylene Fiber (gm)": (0, 5), 
+    "Steel Fiber (gm)": (0, 5), 
+    "Length of PF (mm)": (0, 15), 
+    "Diameter of PF (mm)": (0, 0.5), 
+    "Length of SF (mm)": (0, 65), 
+    "Diameter of SF (mm)": (0, 1.5), 
+    "Cement Content (gm)": (0, 600), 
+    "FlyAsh (gm)": (0, 300),
+    "GGBS (gm)": (0, 300),
+    "Fine Aggregate (gm)": (10, 900), 
+    "NaOH pallets (gm)": (0, 50), 
+    "Water (gm)": (1, 250), 
+    "Na2SiO3 (gm)": (0, 75), 
+    "Water:Binder": (0.2, 0.8),
+    "Density (kg/m3)": (1900, 2500), 
+    "AGE": (1, 56), 
+    "Steel Fiber: Polypropylene Fiber": (0, 5),
+    "Total Binder (gm)": (1, 700), 
+    "Fine Aggregate : Binder": (0.2, 3.0)
+}
 
-# ---------------- User Input ----------------
+# ---------------- Input Fields ----------------
+input_features = list(valid_ranges.keys())
+
 st.header("🧾 Input Parameters")
 user_input = {}
 
+# Gather manual inputs (except auto-calculated ones)
 for feature in input_features:
     if feature in ["Water:Binder", "Total Binder (gm)", "Fine Aggregate : Binder", "Steel Fiber: Polypropylene Fiber"]:
-        user_input[feature] = 0.0  # Will be auto-calculated
+        user_input[feature] = 0.0  # Auto-calculated later
     else:
-        user_input[feature] = st.number_input(feature, value=0.0, min_value=0.0)
+        min_val, max_val = valid_ranges[feature]
+        user_input[feature] = st.number_input(
+            feature, value=0.0, min_value=0.0,
+            help=f"Valid range: {min_val} to {max_val}"
+        )
 
 # ---------------- Auto-Calculations ----------------
 cement = user_input["Cement Content (gm)"]
@@ -62,7 +83,7 @@ water = user_input["Water (gm)"]
 pf = user_input["Polypropylene Fiber (gm)"]
 sf = user_input["Steel Fiber (gm)"]
 
-# Calculate derived features safely
+# Calculate derived features
 total_binder = cement + flyash + ggbs
 water_binder = water / total_binder if total_binder > 0 else 0
 fineagg_binder = fine_agg / total_binder if total_binder > 0 else 0
@@ -82,14 +103,20 @@ st.write(f"**Steel Fiber : Polypropylene Fiber:** {sf_pf_ratio:.3f}")
 
 # ---------------- Input Validation ----------------
 invalid_inputs = []
+out_of_range_inputs = []
 
-# Allow these to be zero
-allowed_zero = {
-    "Polypropylene Fiber (gm)", "Steel Fiber (gm)", "Length of PF (mm)", "Diameter of PF (mm)",
-    "Length of SF (mm)", "Diameter of SF (mm)", "Cement Content (gm)", "FlyAsh (gm)", "GGBS (gm)"
-}
+# Rule exceptions for NaOH and Na2SiO3
+allow_zero_activators = (flyash == 0 and ggbs == 0)
 
-# These must be non-zero
+# Validate ranges and non-zero requirements
+for feature, value in user_input.items():
+    min_val, max_val = valid_ranges.get(feature, (None, None))
+    
+    # Range validation
+    if min_val is not None and (value < min_val or value > max_val):
+        out_of_range_inputs.append((feature, value, min_val, max_val))
+
+# Non-zero validation (excluding allowed ones)
 non_zero = {
     "Fine Aggregate (gm)", "NaOH pallets (gm)", "Water (gm)", "Na2SiO3 (gm)",
     "Water:Binder", "Density (kg/m3)", "AGE", "Steel Fiber: Polypropylene Fiber",
@@ -98,10 +125,23 @@ non_zero = {
 
 for key in non_zero:
     if key in user_input and user_input[key] == 0:
+        # allow NaOH & Na2SiO3 to be zero if no FA & GGBS
+        if allow_zero_activators and key in ["NaOH pallets (gm)", "Na2SiO3 (gm)"]:
+            continue
         invalid_inputs.append(key)
 
+# Display warnings
 if invalid_inputs:
     st.warning(f"⚠️ The following inputs must be **non-zero**: {', '.join(invalid_inputs)}")
+
+if out_of_range_inputs:
+    st.markdown("### ⚠️ Out-of-Range Warnings")
+    for feature, val, min_val, max_val in out_of_range_inputs:
+        st.markdown(
+            f"<span style='color:orange;'>⚠️ **{feature}** = {val} "
+            f"is outside valid range ({min_val}–{max_val}). Predictions may be unreliable.</span>",
+            unsafe_allow_html=True
+        )
 
 # ---------------- Predict Button ----------------
 if st.button("🔮 Predict"):
@@ -109,11 +149,12 @@ if st.button("🔮 Predict"):
         st.error("❌ Please correct the invalid inputs before prediction.")
     else:
         input_df = pd.DataFrame([user_input])
-        input_df = input_df[input_features]  # ensure correct order
-
-        # Clip extreme unseen values (avoid model extrapolation errors)
-        input_df = input_df.clip(lower=0, upper=np.percentile(input_df, 99, axis=0))
-
+        input_df = input_df[input_features]  # ensure order
+        
+        # Clip extreme unseen values to prevent extrapolation issues
+        for col, (min_val, max_val) in valid_ranges.items():
+            input_df[col] = np.clip(input_df[col], min_val, max_val)
+        
         # Run predictions
         predictions = {}
         for name, model in models.items():
