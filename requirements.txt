@@ -2,7 +2,6 @@ streamlit==1.50.0
 pandas==2.3.2
 numpy==1.26.4
 scikit-learn==1.6.1
-xgboost==2.0.3
 joblib==1.5.2
 matplotlib
 openpyxl
